@@ -15,6 +15,15 @@ const HAZE = 0.0012;
 const GRAIN = 0.012;
 const DENSITY: Record<Settings["quality"], number> = { draft: 0.5, hd: 1, ultra: 1.5 };
 const MAX_PIXEL_RATIO = 2;
+const GOVERNOR = {
+  window: 40,
+  slow: 1000 / 48,
+  fast: 1000 / 57,
+  step: 0.85,
+  floor: 0.5,
+  stall: 250,
+  patience: 8,
+};
 
 export interface Lava {
   readonly ready: Promise<void>;
@@ -45,7 +54,7 @@ export function createLava(canvas: HTMLCanvasElement, settings: Store<Settings>)
       const size = world?.size ?? [1, 1];
       const view = viewAt(size, output.size, clock, value);
       return {
-        resolution: output.size,
+        resolution: hdr.size,
         world: size,
         viewCenter: view.center,
         viewHalf: view.half,
@@ -86,11 +95,44 @@ export function createLava(canvas: HTMLCanvasElement, settings: Store<Settings>)
       simulation?.destroy();
       world?.destroy();
       world = createWorld(gpu, worldFor(shaped.layout, output.size), shaped);
+      spent = frames = 0;
       simulation = createSimulation(gpu, { terrain: world, frame: frameData, plate: shaped.plate });
       shade.set({ surfaceTex: world.surface, flowTex: world.flow, rockTex: world.rock });
       for (let i = 0; i < WARMUP.steps; i++) {
         time += i ? WARMUP.dt : 0;
         advance(i ? WARMUP.dt : 0);
+      }
+    };
+
+    let scale = 1;
+    let ceiling = 1;
+    let spent = 0;
+    let frames = 0;
+    let calm = 0;
+    const scaled = (size: Size): [number, number] => [
+      Math.max(1, Math.round(size[0] * scale)),
+      Math.max(1, Math.round(size[1] * scale)),
+    ];
+    const rescale = (next: number) => {
+      scale = next;
+      hdr.resize(scaled(output.size));
+      bloom.resize(scaled(output.size));
+    };
+    const govern = (ms: number) => {
+      if (ms > GOVERNOR.stall) return;
+      spent += ms;
+      frames += 1;
+      if (frames < GOVERNOR.window) return;
+      const average = spent / frames;
+      spent = frames = 0;
+      if (average > GOVERNOR.slow) {
+        calm = 0;
+        ceiling = Math.max(GOVERNOR.floor, scale * GOVERNOR.step);
+        if (ceiling < scale) rescale(ceiling);
+      } else if (average < GOVERNOR.fast) {
+        calm += 1;
+        if (calm % GOVERNOR.patience === 0) ceiling = Math.min(1, ceiling / GOVERNOR.step);
+        if (scale < ceiling) rescale(Math.min(ceiling, scale / GOVERNOR.step));
       }
     };
 
@@ -101,8 +143,7 @@ export function createLava(canvas: HTMLCanvasElement, settings: Store<Settings>)
       ) as [number, number];
       if (!same(size, output.size)) {
         output.resize(size);
-        hdr.resize(size);
-        bloom.resize(size);
+        rescale(scale);
       }
       if (!world || !same(worldFor(settings.get().layout, size), world.size)) generate();
     };
@@ -136,6 +177,7 @@ export function createLava(canvas: HTMLCanvasElement, settings: Store<Settings>)
     const loop = frameLoop(gpu, (current) => {
       const now = performance.now();
       const dt = Math.min(Math.max(now - last, 0) / 1000, LONGEST_STEP);
+      govern(now - last);
       last = now;
       const value = settings.get();
       if (value.motion === "play") {

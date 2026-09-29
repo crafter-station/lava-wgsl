@@ -323,6 +323,9 @@
 
   .sheet {
     width: min(340px, 88vw);
+    background: rgba(12, 12, 12, 0.9);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
     padding-top: calc(24px + env(safe-area-inset-top));
     font-size: 14px;
   }
