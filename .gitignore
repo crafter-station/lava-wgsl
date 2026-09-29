@@ -1,0 +1,10 @@
+node_modules
+dist
+.DS_Store
+*.local
+.vercel
+.cache
+.env*
+*.mp4
+*.mov
+__pycache__

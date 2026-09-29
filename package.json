@@ -1,0 +1,28 @@
+{
+  "name": "lava-wgsl",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pahoehoe lava rendered live on WebGPU with WGSL compute and vgpu.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/crafter-station/lava-wgsl.git"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 5190",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --port 5190",
+    "format": "prettier --write ."
+  },
+  "dependencies": {
+    "vgpu": "^0.5.0"
+  },
+  "devDependencies": {
+    "@vgpu/wgsl": "^0.5.0",
+    "@webgpu/types": "^0.1.74",
+    "prettier": "^3.9.8",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.0"
+  }
+}
