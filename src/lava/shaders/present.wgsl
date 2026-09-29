@@ -23,7 +23,10 @@ fn fs_main(@builtin(position) position: vec4f, @location(0) uv: vec2f) -> @locat
   let glow = textureSampleLevel(bloomTex, linearSampler, uv, 0.0).rgb;
   let heat = clamp(dot(glow, vec3f(0.5, 0.35, 0.15)) * 0.8, 0.0, 1.0);
   let q = vec3f(uv * vec2f(size.x / size.y, 1.0) * 18.0 + vec2f(0.0, present.time * 0.9), present.time * 0.6);
-  let shimmer = vec2f(noise3(q), noise3(q + 17.3)) * present.haze * heat;
+  var shimmer = vec2f(0.0);
+  if (present.haze * heat > 0.0) {
+    shimmer = vec2f(noise3(q), noise3(q + 17.3)) * present.haze * heat;
+  }
   let hdr = textureSampleLevel(hdrTex, linearSampler, uv + shimmer, 0.0).rgb;
 
   let color = filmic(hdr + glow * present.bloom);

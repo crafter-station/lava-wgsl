@@ -1,4 +1,3 @@
-import { bilinear } from "./sample.wgsl";
 import { Frame, generation, layerPhase, seedOf, unfilmic } from "./common.wgsl";
 import { emission, SKY, sky } from "./light.wgsl";
 import { cells, fbm, noise2, noised } from "./noise.wgsl";
@@ -64,7 +63,7 @@ fn carried(p: vec2f, id: f32, plate: vec4f, layer: i32) -> Skin {
   let turn = vec2f(cos(plate.z), sin(plate.z));
   let offset = p - plate.xy;
   let material = seed + vec2f(turn.x * offset.x + turn.y * offset.y, turn.x * offset.y - turn.y * offset.x);
-  let motion = bilinear(flowTex, worldUv(clamp(seed, vec2f(0.0), frame.world)));
+  let motion = textureSampleLevel(flowTex, linearSampler, worldUv(clamp(seed, vec2f(0.0), frame.world)), 0.0);
   return crustAt(material + f32(layer) * 311.0, motion);
 }
 
@@ -155,7 +154,7 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   let turn = frame.viewTurn;
   let p = frame.viewCenter + vec2f(turn.x * local.x - turn.y * local.y, turn.y * local.x + turn.x * local.y);
   let px = 2.0 * frame.viewHalf.y / frame.resolution.y;
-  let surface = bilinear(surfaceTex, worldUv(p));
+  let surface = textureSampleLevel(surfaceTex, linearSampler, worldUv(p), 0.0);
   let coverage = smoothstep(-0.75 * px, 0.75 * px, surface.r);
   var color = pow(textureSampleLevel(rockTex, linearSampler, worldUv(p), 0.0).rgb, vec3f(2.2));
   if (coverage > 0.0) {

@@ -2,6 +2,7 @@ import { bilinear } from "./sample.wgsl";
 import { Frame, reborn } from "./common.wgsl";
 
 @group(0) @binding(0) var<uniform> frame: Frame;
+@group(0) @binding(1) var linearSampler: sampler;
 @group(0) @binding(2) var flowTex: texture_2d<f32>;
 @group(0) @binding(3) var coordsIn: texture_2d<f32>;
 @group(0) @binding(4) var coordsOut: texture_storage_2d<rgba32float, write>;
@@ -12,8 +13,8 @@ fn main(@builtin(global_invocation_id) id: vec3u) {
   if (id.x >= size.x || id.y >= size.y) {
     return;
   }
-  let p = vec2f(id.xy) + 0.5;
-  let flow = bilinear(flowTex, p / frame.world).xy;
+  let p = (vec2f(id.xy) + 0.5) * frame.world / vec2f(size);
+  let flow = textureSampleLevel(flowTex, linearSampler, p / frame.world, 0.0).xy;
   let origin = p - flow * frame.dt;
   let inside = clamp(origin, vec2f(0.5), frame.world - 0.5);
   let beyond = origin - inside;

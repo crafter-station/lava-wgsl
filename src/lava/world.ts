@@ -1,4 +1,4 @@
-import { compute, storage, texture, type Gpu, type Texture } from "vgpu";
+import { compute, sampler, storage, texture, type Gpu, type Texture } from "vgpu";
 import type { Settings } from "../state/settings";
 import { FIELD_HEAT, FIELD_OUTLINES, FIELD_WORLD } from "./field";
 import { pack } from "./layout";
@@ -64,6 +64,7 @@ export function createWorld(gpu: Gpu, size: Size, shape: Shape): World {
     owned.push(made);
     return made;
   };
+  const linear = sampler(gpu, { magFilter: "linear", minFilter: "linear" });
   const terrain = field(size, "rgba32float", "terrain");
   let guess = 0;
 
@@ -143,7 +144,7 @@ export function createWorld(gpu: Gpu, size: Size, shape: Shape): World {
   });
 
   const psi = coarse;
-  const flow = field(psi.size as Size, "rgba32float", "flow");
+  const flow = field(psi.size as Size, "rgba16float", "flow");
   compute(gpu, flowWgsl, {
     label: "flow",
     set: {
@@ -155,7 +156,7 @@ export function createWorld(gpu: Gpu, size: Size, shape: Shape): World {
   const heat = new Float32Array(shape.layout === "field" ? FIELD_HEAT : [0, 0, 1, 0]);
   const blobs = storage(gpu, heat.byteLength, "read");
   blobs.write(heat);
-  const surface = field(size, "rgba32float", "surface");
+  const surface = field(size, "rgba16float", "surface");
   compute(gpu, surfaceWgsl, {
     label: "surface",
     set: {
@@ -163,6 +164,7 @@ export function createWorld(gpu: Gpu, size: Size, shape: Shape): World {
       blobs,
       terrainTex: terrain,
       flowTex: flow,
+      linearSampler: linear,
       surfaceOut: surface,
       psiTex: psi,
     },
@@ -176,6 +178,7 @@ export function createWorld(gpu: Gpu, size: Size, shape: Shape): World {
     set: {
       look: { world: size, seed: shape.seed },
       surfaceTex: surface,
+      linearSampler: linear,
       rockOut: rock,
     },
   }).dispatch(...groups(rockSize));

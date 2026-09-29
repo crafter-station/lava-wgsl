@@ -1,4 +1,3 @@
-import { bilinear } from "./sample.wgsl";
 import { BASALT, emission, SUN } from "./light.wgsl";
 import { cells, fbm, noise2 } from "./noise.wgsl";
 
@@ -9,6 +8,7 @@ struct Rock {
 
 @group(0) @binding(0) var<uniform> look: Rock;
 @group(0) @binding(1) var surfaceTex: texture_2d<f32>;
+@group(0) @binding(2) var linearSampler: sampler;
 @group(0) @binding(3) var rockOut: texture_storage_2d<rgba8unorm, write>;
 
 struct Ground {
@@ -59,7 +59,7 @@ fn main(@builtin(global_invocation_id) id: vec3u) {
     return;
   }
   let p = (vec2f(id.xy) + 0.5) * look.world / vec2f(size);
-  let surface = bilinear(surfaceTex, p / look.world);
+  let surface = textureSampleLevel(surfaceTex, linearSampler, p / look.world, 0.0);
   let color = shadeRock(p, surface, look.world.y / f32(size.y));
   textureStore(rockOut, id.xy, vec4f(pow(max(color, vec3f(0.0)), vec3f(1.0 / 2.2)), 1.0));
 }

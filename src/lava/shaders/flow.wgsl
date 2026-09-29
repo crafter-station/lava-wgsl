@@ -5,7 +5,7 @@ struct Grid {
 
 @group(0) @binding(0) var<uniform> grid: Grid;
 @group(0) @binding(1) var psiTex: texture_2d<f32>;
-@group(0) @binding(2) var flowOut: texture_storage_2d<rgba32float, write>;
+@group(0) @binding(2) var flowOut: texture_storage_2d<rgba16float, write>;
 
 fn psi(cell: vec2i) -> f32 {
   return textureLoad(psiTex, clamp(cell, vec2i(0), vec2i(textureDimensions(psiTex)) - 1), 0).r;

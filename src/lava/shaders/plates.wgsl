@@ -1,13 +1,13 @@
-import { bilinear } from "./sample.wgsl";
 import { Frame, reborn, seedOf } from "./common.wgsl";
 
 @group(0) @binding(0) var<uniform> frame: Frame;
+@group(0) @binding(1) var linearSampler: sampler;
 @group(0) @binding(2) var flowTex: texture_2d<f32>;
 @group(0) @binding(3) var platesIn: texture_2d<f32>;
 @group(0) @binding(4) var platesOut: texture_storage_2d<rgba32float, write>;
 
 fn flowAt(p: vec2f) -> vec3f {
-  return bilinear(flowTex, p / frame.world).xyz;
+  return textureSampleLevel(flowTex, linearSampler, p / frame.world, 0.0).xyz;
 }
 
 @compute @workgroup_size(8, 8)

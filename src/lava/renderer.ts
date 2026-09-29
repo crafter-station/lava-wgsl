@@ -96,7 +96,7 @@ export function createLava(canvas: HTMLCanvasElement, settings: Store<Settings>)
       world?.destroy();
       world = createWorld(gpu, worldFor(shaped.layout, output.size), shaped);
       spent = frames = 0;
-      simulation = createSimulation(gpu, { terrain: world, frame: frameData, plate: shaped.plate });
+      simulation = createSimulation(gpu, { terrain: world, frame: frameData, linear, plate: shaped.plate });
       shade.set({ surfaceTex: world.surface, flowTex: world.flow, rockTex: world.rock });
       for (let i = 0; i < WARMUP.steps; i++) {
         time += i ? WARMUP.dt : 0;
@@ -104,7 +104,7 @@ export function createLava(canvas: HTMLCanvasElement, settings: Store<Settings>)
       }
     };
 
-    let scale = 1;
+    let scale = matchMedia("(pointer: coarse)").matches ? 0.75 : 1;
     let ceiling = 1;
     let spent = 0;
     let frames = 0;

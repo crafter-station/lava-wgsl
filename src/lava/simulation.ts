@@ -6,6 +6,7 @@ import simWgsl from "./shaders/sim.wgsl";
 
 const GROUP = 8;
 const REACH = 9;
+const COORDS = 2;
 
 type Size = readonly [number, number];
 type Pair = [Texture, Texture];
@@ -23,10 +24,11 @@ export const padFor = (plate: number) => plate * REACH;
 export interface SimulationOptions {
   readonly terrain: World;
   readonly frame: SharedUniforms;
+  readonly linear: GPUSampler;
   readonly plate: number;
 }
 
-export function createSimulation(gpu: Gpu, { terrain, frame, plate }: SimulationOptions): Simulation {
+export function createSimulation(gpu: Gpu, { terrain, frame, linear, plate }: SimulationOptions): Simulation {
   const world = terrain.size;
   const field = (size: Size, label: string) =>
     texture(gpu, {
@@ -37,14 +39,15 @@ export function createSimulation(gpu: Gpu, { terrain, frame, plate }: Simulation
       label,
     });
   const pair = (size: Size, label: string): Pair => [field(size, `${label}-a`), field(size, `${label}-b`)];
-  const common = { frame, flowTex: terrain.flow };
+  const common = { frame, linearSampler: linear, flowTex: terrain.flow };
   const sim = compute(gpu, simWgsl, { label: "sim", set: common });
   const plates = compute(gpu, platesWgsl, { label: "plates", set: common });
   const lookup = compute(gpu, lookupWgsl, { label: "lookup", set: { frame } });
   const run = (pass: typeof sim, [width, height]: Size) =>
     pass.dispatch(Math.ceil(width / GROUP), Math.ceil(height / GROUP));
 
-  const coords = pair(world, "coords");
+  const coarse: Size = [Math.ceil(world[0] / COORDS), Math.ceil(world[1] / COORDS)];
+  const coords = pair(coarse, "coords");
   let current = 0;
   let layout = build(plate);
 
@@ -70,7 +73,7 @@ export function createSimulation(gpu: Gpu, { terrain, frame, plate }: Simulation
     },
     step() {
       const next = 1 - current;
-      run(sim.set({ coordsIn: coords[current], coordsOut: coords[next] }), world);
+      run(sim.set({ coordsIn: coords[current], coordsOut: coords[next] }), coarse);
       run(plates.set({ platesIn: layout.plates[current], platesOut: layout.plates[next] }), layout.stack);
       current = next;
       const read = {

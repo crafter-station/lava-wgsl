@@ -11,7 +11,8 @@ struct Look {
 @group(0) @binding(0) var<uniform> look: Look;
 @group(0) @binding(1) var terrainTex: texture_2d<f32>;
 @group(0) @binding(2) var flowTex: texture_2d<f32>;
-@group(0) @binding(4) var surfaceOut: texture_storage_2d<rgba32float, write>;
+@group(0) @binding(3) var linearSampler: sampler;
+@group(0) @binding(4) var surfaceOut: texture_storage_2d<rgba16float, write>;
 @group(0) @binding(5) var psiTex: texture_2d<f32>;
 @group(0) @binding(6) var<storage, read> blobs: array<vec4f>;
 
@@ -53,7 +54,7 @@ fn main(@builtin(global_invocation_id) id: vec3u) {
   let p = (vec2f(c) + 0.5) * h;
   let slope = vec2f(raw(c + vec2i(1, 0)) - raw(c - vec2i(1, 0)), raw(c + vec2i(0, 1)) - raw(c - vec2i(0, 1))) / (2.0 * h);
   let distance = raw(c) / max(length(slope), 0.25);
-  let shear = min(bilinear(flowTex, p / look.world).a, 0.25);
+  let shear = min(textureSampleLevel(flowTex, linearSampler, p / look.world, 0.0).a, 0.25);
   let near = bump(distance, 6.0, 3.0);
   let band = bump(distance, 14.0, 6.0);
   let drift = fbm(p / 120.0 + look.seed, 4);
